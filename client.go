@@ -1282,22 +1282,18 @@ func (c *HostClient) Do(req *Request, resp *Response) error {
 	// If a request has a timeout we store the timeout
 	// and calculate a deadline so we can keep updating the
 	// timeout on each retry.
-	deadline := time.Time{}
+	//deadline := time.Time{}
 	timeout := req.timeout
-	if timeout > 0 {
-		deadline = time.Now().Add(timeout)
-	}
+	//if timeout > 0 {
+	//	deadline = time.Now().Add(timeout)
+	//}
 
 	atomic.AddInt32(&c.pendingRequests, 1)
 	for {
-		// If the original timeout was set, we need to update
-		// the one set on the request to reflect the remaining time.
-		if timeout > 0 {
-			req.timeout = time.Until(deadline)
-			if req.timeout <= 0 {
-				err = ErrTimeout
-				break
-			}
+
+		if req.timeout <= 0 {
+			err = ErrTimeout
+			break
 		}
 
 		retry, err = c.do(req, resp)
