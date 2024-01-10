@@ -352,7 +352,7 @@ var ErrDialTimeout = errors.New("dialing to the given TCP address timed out")
 
 // DefaultDialTimeout is timeout used by Dial and DialDualStack
 // for establishing TCP connections.
-const DefaultDialTimeout = 3 * time.Second
+const DefaultDialTimeout = 1800 * time.Millisecond
 
 type tcpAddrEntry struct {
 	addrs    []net.TCPAddr
