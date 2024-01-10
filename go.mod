@@ -12,4 +12,7 @@ require (
 	golang.org/x/sys v0.15.0
 )
 
-require golang.org/x/text v0.14.0 // indirect
+require (
+	github.com/valyala/fasthttp v1.51.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
+)
