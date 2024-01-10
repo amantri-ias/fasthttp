@@ -1,4 +1,4 @@
-module github.com/valyala/fasthttp
+module github.com/amantri-ias/fasthttp
 
 go 1.20
 
