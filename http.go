@@ -190,6 +190,7 @@ func (req *Request) SetConnectionClose() {
 	req.Header.SetConnectionClose()
 }
 
+// some great change
 func (req *Request) SetDeadline(deadline time.Time) {
 	req.deadline = deadline
 }
