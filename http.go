@@ -190,6 +190,10 @@ func (req *Request) SetConnectionClose() {
 	req.Header.SetConnectionClose()
 }
 
+func (req *Request) SetDeadline(deadline time.Time) {
+	req.deadline = deadline
+}
+
 // SendFile registers file on the given path to be used as response body
 // when Write is called.
 //
