@@ -1,0 +1,155 @@
+var_6: &run-all-tests-task
+  run:
+    name: Run all tests
+    working_directory: /go/src/github.com/publica-project/fasthttp
+    command: |
+      go test -p=2 ./...
+
+var_7: &prepare-code-task
+  run:
+    name: Prepare the code
+    working_directory: /go/src/github.com/publica-project/fasthttp
+    command: |
+      source "./bin/helper.sh"
+      export PATH="./bin:$PATH"
+
+      # compute the BUILD_VERSION that will be used by the build and deploy scripts
+      echo ">>> computing the build version"
+      compute_build_version > .build-version
+      cat .build-version
+      echo;echo;
+
+      # compute the commit range
+      echo ">>> computing the commit range"
+      commit_range > .commit-range
+      cat .commit-range
+      echo;echo;
+
+      # compute the changed targets
+      echo ">>> computing the changed targets"
+      changed_targets $(cat .commit-range) > .changed-targets
+      cat .changed-targets
+      echo;echo;
+
+
+version: 2
+jobs:
+
+  ####################
+  # pull request
+
+  test-pr:
+    working_directory: /go/src/github.com/publica-project/fasthttp
+
+    docker:
+      - image: 530552309468.dkr.ecr.us-east-1.amazonaws.com/circleci:golang-go-1.19-9a4fd03f
+        aws_auth:
+          aws_access_key_id: $ADBLOCK_AWS_ACCESS_KEY_ID
+          aws_secret_access_key: $ADBLOCK_AWS_SECRET_ACCESS_KEY
+
+    steps:
+      - checkout
+
+      - *prepare-code-task
+      - *run-all-tests-task
+
+      - store_artifacts:
+          path: ./.build-version
+          destination: build-version.txt
+
+      - store_artifacts:
+          path: ./.commit-range
+          destination: commit-range.txt
+
+      - store_artifacts:
+          path: ./.changed-targets
+          destination: changed-targets.txt
+
+      - persist_to_workspace:
+          root: /
+          paths:
+            - go/src/github.com/publica-project/fasthttp
+
+  job-pr:
+    working_directory: /go/src/github.com/publica-project/fasthttp
+    docker:
+      - image: 530552309468.dkr.ecr.us-east-1.amazonaws.com/circleci:golang-go-1.19-9a4fd03f
+        aws_auth:
+          aws_access_key_id: $ADBLOCK_AWS_ACCESS_KEY_ID
+          aws_secret_access_key: $ADBLOCK_AWS_SECRET_ACCESS_KEY
+    steps:
+      - attach_workspace:
+          at: /
+
+
+
+  ###
+  ####################
+
+  ####################
+  ### master
+
+  job-master:
+    working_directory: /go/src/github.com/publica-project/fasthttp
+
+    docker:
+      - image: 530552309468.dkr.ecr.us-east-1.amazonaws.com/circleci:golang-go-1.19-9a4fd03f
+        aws_auth:
+          aws_access_key_id: $ADBLOCK_AWS_ACCESS_KEY_ID
+          aws_secret_access_key: $ADBLOCK_AWS_SECRET_ACCESS_KEY
+
+    steps:
+      - checkout
+      - *prepare-code-task
+      - *run-all-tests-task
+
+      - store_artifacts:
+          path: ./.build-version
+          destination: build-version.txt
+
+      - store_artifacts:
+          path: ./.commit-range
+          destination: commit-range.txt
+
+      - store_artifacts:
+          path: ./.changed-targets
+          destination: changed-targets.txt
+
+
+
+###
+####################
+
+workflows:
+  version: 2
+  feature_branch:
+    jobs:
+      - test-pr:
+          context: org-global
+          filters:
+            branches:
+              ignore:
+                - /^(master|circleci)$/
+
+      - tag-pr-approval:
+          type: approval
+          filters:
+            branches:
+              ignore:
+                - /^(master|circleci)$/
+
+      - job-pr:
+          context: org-global
+          requires:
+            - tag-pr-approval
+            - test-pr
+
+  master_branch:
+    jobs:
+      - job-master:
+          context: org-global
+          filters:
+            branches:
+              only:
+                - master
+                - circleci
