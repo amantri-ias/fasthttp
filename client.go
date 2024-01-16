@@ -469,6 +469,7 @@ func (c *Client) DoRedirects(req *Request, resp *Response, maxRedirectsCount int
 //
 // It is recommended obtaining req and resp via AcquireRequest
 // and AcquireResponse in performance-critical code.
+
 func (c *Client) Do(req *Request, resp *Response) error {
 	uri := req.URI()
 	if uri == nil {
@@ -1282,18 +1283,21 @@ func (c *HostClient) Do(req *Request, resp *Response) error {
 	// If a request has a timeout we store the timeout
 	// and calculate a deadline so we can keep updating the
 	// timeout on each retry.
-	//deadline := time.Time{}
+	deadline := time.Time{}
 	timeout := req.timeout
-	//if timeout > 0 {
-	//	deadline = time.Now().Add(timeout)
-	//}
+	if timeout > 0 {
+		deadline = time.Now().Add(timeout)
+	}
 
 	atomic.AddInt32(&c.pendingRequests, 1)
 	for {
 
-		if req.timeout <= 0 {
-			err = ErrTimeout
-			break
+		if timeout > 0 {
+			req.timeout = time.Until(deadline)
+			if req.timeout <= 0 {
+				err = ErrTimeout
+				break
+			}
 		}
 
 		retry, err = c.do(req, resp)
@@ -2904,6 +2908,10 @@ func (t *transport) RoundTrip(hc *HostClient, req *Request, resp *Response) (ret
 		}
 	}
 
+	if req.deadline.IsZero() {
+		writeDeadline = req.deadline
+	}
+
 	if err = conn.SetWriteDeadline(writeDeadline); err != nil {
 		hc.closeConn(cc)
 		return true, err
@@ -2944,6 +2952,10 @@ func (t *transport) RoundTrip(hc *HostClient, req *Request, resp *Response) (ret
 		if readDeadline.IsZero() || tmpReadDeadline.Before(readDeadline) {
 			readDeadline = tmpReadDeadline
 		}
+	}
+
+	if req.deadline.IsZero() {
+		readDeadline = req.deadline
 	}
 
 	if err = conn.SetReadDeadline(readDeadline); err != nil {

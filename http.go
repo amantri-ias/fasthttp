@@ -69,6 +69,8 @@ type Request struct {
 	// if <= 0, means not set
 	timeout time.Duration
 
+	deadline time.Time
+
 	// Use Host header (request.Header.SetHost) instead of the host from SetRequestURI, SetHost, or URI().SetHost
 	UseHostHeader bool
 
